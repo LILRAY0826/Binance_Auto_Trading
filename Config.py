@@ -26,7 +26,6 @@ class Functions:
 
             # How many quantity would be ordered.
             quantity = self.get_quantity(buy=buy, leverage=leverage)
-
             # Create Position
             self.set_order(leverage=leverage,
                            direction=direction,
@@ -35,7 +34,6 @@ class Functions:
                            anti_direction_choppy=anti_direction_choppy)
             time.sleep(0.5)
             self.set_profit_stop(afford_range=afford_range)
-            print("Create New Position : " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
         else:
             self.set_profit_stop(afford_range=afford_range)
@@ -93,6 +91,7 @@ class Functions:
         self.client.futures_change_leverage(symbol='BTCUSDT', leverage=leverage)
         # Create Long order
         if direction == "LONG":
+
             for index, info in enumerate(self.client.futures_position_information()):
                 if info['symbol'] == 'BTCUSDT' and info['positionSide'] == 'LONG':
                     entry_price = round(float(info['entryPrice']), 2)
@@ -100,6 +99,7 @@ class Functions:
                     if entry_price - anti_direction_choppy < float(self.futures_client.ticker_price("BTCUSDT")['price']) < entry_price + direction_choppy:
                         pass
                     else:
+                        print("Create New Position : " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         self.client.futures_create_order(symbol='BTCUSDT',
                                                          side='BUY',
                                                          type='MARKET',
@@ -115,6 +115,7 @@ class Functions:
                     if entry_price - direction_choppy < float(self.futures_client.ticker_price("BTCUSDT")['price']) < entry_price + anti_direction_choppy:
                         pass
                     else:
+                        print("Create New Position : " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         self.client.futures_create_order(symbol='BTCUSDT',
                                                          side='SELL',
                                                          type='MARKET',
@@ -177,9 +178,9 @@ class Functions:
     @staticmethod
     def get_direction(klines: pd.Series, txt_path="Last Time Direction.txt"):
         if klines['DIF'] - klines['DEA'] < 0:
-            direction = 'short'
+            direction = 'SHORT'
         else:
-            direction = 'long'
+            direction = 'LONG'
 
         if os.path.exists(txt_path):
             with open(txt_path, 'r') as w:
