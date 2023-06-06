@@ -1,5 +1,4 @@
 from Config import Functions
-import pandas as pd
 
 # Account & Password
 api_key = 'Nsw6xqsnHbfLyF8YExEfeVVJz4Jn3F4c4VHCr5L5sl8n8KUKzsPazLx4IX4dMaPD'

@@ -1,6 +1,5 @@
 from binance.client import Client
 import pandas as pd
-import talib
 import math
 import os
 pd.set_option('mode.chained_assignment', None)
@@ -25,11 +24,18 @@ class Functions:
         dataframe['Open Time'] = pd.to_datetime((dataframe['Open Time'] + 288e5) / 1000, unit='s')
         dataframe['Close Time'] = pd.to_datetime((dataframe['Close Time'] + 288e5) / 1000, unit='s')
 
+        # Compute dif and dea
+        dif = dataframe['close'].ewm(span=12, adjust=False, min_periods=12).mean() - dataframe['close'].ewm(span=26, adjust=False, min_periods=26).mean()
+        dea = dif.ewm(span=9, adjust=False, min_periods=9).mean()
+
         # Compute macd
-        dataframe["DIF"], dataframe["DEA"], dataframe["MACD"] = talib.MACD(dataframe['close'],
-                                                                           fastperiod=12,
-                                                                           slowperiod=26,
-                                                                           signalperiod=9)
+        macd = dif - dea
+
+        # Add all of our new values for the MACD to the dataframe
+        dataframe['DIF'] = dataframe.index.map(dif)
+        dataframe['DEA'] = dataframe.index.map(dea)
+        dataframe['MACD'] = dataframe.index.map(macd)
+
         for column in dataframe.columns:
             for index, item in enumerate(dataframe[column]):
                 try:
