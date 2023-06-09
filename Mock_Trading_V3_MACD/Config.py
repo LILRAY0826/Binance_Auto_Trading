@@ -1,6 +1,7 @@
 from binance.client import Client
 from binance.um_futures import UMFutures
 from datetime import datetime
+from tqdm import tqdm
 import pandas as pd
 import math
 import time
@@ -18,14 +19,20 @@ class Functions:
     # Main function for Mock Trading
     def mock_trading(self, entry_data: list, klines_dataframe: pd.DataFrame, start_property, buy, leverage, afford_range, direction_choppy, anti_direction_choppy):
 
-        long_position = []
-        short_position = []
-        position_history = pd.DataFrame(columns=["klines_open time", "klines_open_price", "klines_high_price", "klines_low_price", "klines_close_price", "space 1"
-                                                 "order_entry_time", "order_entry_direction", "order_price", "order_quantity", "order_liquidation", "space 2"
-                                                 "position_entry_time", "position_entry_direction", "position_price", "position_quantity", "position_liquidation"])
+        long_position = [[None, None, None, None, None, None]]
+        short_position = [[None, None, None, None, None, None]]
+        position_history = pd.DataFrame(columns=["klines_open_time", "klines_open_price", "klines_high_price", "klines_low_price", "klines_close_price", "space 1",
+                                                 "order_entry_time", "order_entry_direction", "order_price", "order_quantity", "space 2",
+                                                 "long_position_entry_time", "long_position_entry_direction", "long_position_price", "long_position_quantity", "long_position_afford_range", "long_position_liquidation", "space 3",
+                                                 "short_position_entry_time", "short_position_entry_direction", "short_position_price", "short_position_quantity", "short_position_afford_range", "short_position_liquidation", "space 4",
+                                                 "Result", "Property"])
 
         # Iterate klines to simulate the market
+        progress = tqdm(total=len(klines_dataframe))
         for index, row in klines_dataframe.iterrows():
+
+            progress.update(1)
+            result = None
 
             open_time = str(row['Open Time'])[:10]
             open_price = row['open']
@@ -33,35 +40,95 @@ class Functions:
             low_price = row['low']
             close_price = row['close']
             boolean, entry_time, entry_price, entry_direction = self.open_time_is_entry_time(open_time, entry_data)
-            quantity = round((buy * leverage) / entry_price, 2)
+
+            if entry_price == None:
+                quantity = None
+            else:
+                quantity = round((buy * leverage) / entry_price, 2)
 
             # Observe Exit Signal
+            if long_position[0][0] != None:
+                if low_price < long_position[0][4] < high_price:
+                    start_property += long_position[0][3] * (long_position[0][4] - long_position[0][2])
+                    long_position = [[None, None, None, None, None, None]]
+                    result = "Win"
+                elif long_position[0][5] > low_price:
+                    start_property += long_position[0][3] * (long_position[0][5] - long_position[0][2])
+                    long_position = [[None, None, None, None, None, None]]
+                    result = "Lose"
+                elif long_position[0][5] < low_price and high_price > long_position[0][4]:
+                    long_position = [[None, None, None, None, None, None]]
+                    result = "Uncertainly"
+                else:
+                    result = None
+
+            if short_position[0][0] != None:
+                if low_price < short_position[0][4] < high_price:
+                    start_property += short_position[0][3] * (short_position[0][2] - short_position[0][4])
+                    short_position = [[None, None, None, None, None, None]]
+                    result = "Win"
+                elif short_position[0][5] < high_price:
+                    start_property += short_position[0][3] * (short_position[0][2] - short_position[0][5])
+                    short_position = [[None, None, None, None, None, None]]
+                    result = "Lose"
+                elif short_position[0][5] < high_price and low_price < short_position[0][4]:
+                    short_position = [[None, None, None, None, None, None]]
+                    result = "Uncertainly"
+                else:
+                    result = None
 
             # Create Position
-            if boolean:
+            if boolean and start_property > buy:
                 # Long Position
                 if "多" in entry_direction:
-                    if len(a) == 0:
-                        liquidation = round(entry_price * (1 + (100 / leverage) / 100), 2)
-                        long_position.append([entry_time, entry_direction, entry_price, quantity, liquidation])
+
+                    if long_position[0][0] == None:
+                        liquidation = round(entry_price * (1 - (100 / leverage) / 100), 2)
+                        long_position = [[entry_time, entry_direction, entry_price, quantity, entry_price + afford_range, liquidation]]
                     else:
                         long_position[0][0] = entry_time
                         times = long_position[0][3] / quantity
                         long_position[0][2] = (long_position[0][2] * times + entry_price) / (times + 1)
                         long_position[0][3] += quantity
-                        long_position[0][4] = round(long_position[0][2] * (1 + (100 / leverage) / 100), 2)
+                        long_position[0][4] = long_position[0][2] + afford_range
+                        long_position[0][5] = round(long_position[0][2] * (1 + (100 / leverage) / 100), 2)
 
                 # Short Position
-                if "空" in entry_direction:
-                    if len(a) == 0:
-                        liquidation = round(entry_price * (1 - (100 / leverage) / 100), 2)
-                        short_position.append([entry_time, entry_direction, entry_price, quantity, liquidation])
+                elif "空" in entry_direction:
+
+                    if short_position[0][0] == None:
+                        liquidation = round(entry_price * (1 + (100 / leverage) / 100), 2)
+                        short_position = [[entry_time, entry_direction, entry_price, quantity, entry_price - afford_range, liquidation]]
                     else:
                         short_position[0][0] = entry_time
                         times = short_position[0][3] / quantity
                         short_position[0][2] = (short_position[0][2] * times + entry_price) / (times + 1)
                         short_position[0][3] += quantity
-                        short_position[0][4] = round(short_position[0][2] * (1 - (100 / leverage) / 100), 2)
+                        short_position[0][4] = short_position[0][2] - afford_range
+                        short_position[0][5] = round(short_position[0][2] * (1 - (100 / leverage) / 100), 2)
+
+            # Record Position Situation
+            list = [[open_time, open_price, high_price, low_price, close_price, None,
+                    entry_time, entry_direction, entry_price, quantity, None,
+                    long_position[0][0], long_position[0][1], long_position[0][2], long_position[0][3], long_position[0][4], long_position[0][5], None,
+                    short_position[0][0], short_position[0][1], short_position[0][2], short_position[0][3], short_position[0][4], short_position[0][5],
+                    result, start_property]]
+
+            if index == 0:
+                position_history = pd.DataFrame(list, columns=["klines_open_time", "klines_open_price", "klines_high_price", "klines_low_price", "klines_close_price", "space 1",
+                                                               "order_entry_time", "order_entry_direction", "order_price", "order_quantity", "space 2",
+                                                               "long_position_entry_time", "long_position_entry_direction", "long_position_price", "long_position_quantity", "long_position_afford_range", "long_position_liquidation", "space 3",
+                                                               "short_position_entry_time", "short_position_entry_direction", "short_position_price", "short_position_quantity", "short_position_afford_range", "short_position_liquidation",
+                                                               "Result", "Property"])
+            else:
+                temp_dataframe = pd.DataFrame(list, columns=["klines_open_time", "klines_open_price", "klines_high_price", "klines_low_price", "klines_close_price", "space 1",
+                                                             "order_entry_time", "order_entry_direction", "order_price", "order_quantity", "space 2",
+                                                             "long_position_entry_time", "long_position_entry_direction", "long_position_price", "long_position_quantity", "long_position_afford_range", "long_position_liquidation", "space 3",
+                                                             "short_position_entry_time", "short_position_entry_direction", "short_position_price", "short_position_quantity", "short_position_afford_range", "short_position_liquidation",
+                                                             "Result", "Property"])
+                position_history = pd.concat([position_history, temp_dataframe])
+
+        position_history.to_csv("Position History.csv", encoding='utf_8_sig')
 
     # About Market's information
     # Get 300 pass klines data
@@ -90,7 +157,9 @@ class Functions:
     def get_entry_time_price(self, klines_dataframe, mock_trading_dataframe):
 
         entry_data = []
+        process = tqdm(total=len(mock_trading_dataframe))
         for index, kind in enumerate(mock_trading_dataframe["種類"]):
+            process.update(1)
             # Get Entry Time
             if "進場" in kind:
                 for index_, open_time in enumerate(klines_dataframe["Open Time"]):
@@ -108,15 +177,17 @@ class Functions:
     def open_time_is_entry_time(self, open_time: str, entry_data):
         open_time = int(open_time.replace("-", ""))
 
-        for data in entry_data:
+        for index, data in enumerate(entry_data):
             entry_time = data[0]
             entry_price = data[1]
             entry_direction = data[2]
-            entry_price_int = int(entry_price.replace("-", ""))
+            entry_time_int = int(entry_time.replace("-", ""))
 
-            if open_time == entry_price_int:
+            if open_time == entry_time_int:
                 return True, entry_time, entry_price, entry_direction
-            elif open_time < entry_price_int:
-                return False, entry_time, entry_price, entry_direction
-            else:
-                return False, entry_time, entry_price, entry_direction
+
+            elif open_time < entry_time_int:
+                return False, None, None, None
+
+            elif index == len(entry_data)-1 and open_time != entry_time_int:
+                return False, None, None, None
