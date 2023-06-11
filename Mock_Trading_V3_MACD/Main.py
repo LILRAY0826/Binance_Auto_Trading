@@ -14,8 +14,8 @@ csv_path = "Trading_View_1Day.csv"
 # Mock Trading Parameter
 initial_property = 8000
 buy = 800
-leverage = 25
-afford_range = 1000
+leverage = 25  # 固定此項
+afford_range = 1000  # 用profit_rate取代
 direction_choppy = 0  # The critical value of direction of position to avoid choppy trend
 anti_direction_choppy = 0  # The critical value of anti direction of position to avoid choppy trend
 
