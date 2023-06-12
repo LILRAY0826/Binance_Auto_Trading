@@ -6,18 +6,18 @@ api_key = 'Nsw6xqsnHbfLyF8YExEfeVVJz4Jn3F4c4VHCr5L5sl8n8KUKzsPazLx4IX4dMaPD'
 api_secret = '5ggLxtySNfzAE64bRgXz6IYHxDtaIDx399FTG1FE9IBd4332AxNBAazeKOCW9HHv'
 
 # Klines Parameter
-start_date = "1 Jan, 2020"
-end_date = "1 Jan, 2021"
-interval = "1day"  # 1hr, 4hr, 1day
-csv_path = "Trading_View_1Day.csv"
+start_date = "12 May, 2023"
+end_date = "12 Jun, 2023"
+interval = "1hr"  # 1hr, 4hr, 1day
+csv_path = "Trading_View_1hr.csv"
 
 # Mock Trading Parameter
 initial_property = 8000
 buy = 800
-leverage = 25  # 固定此項
-afford_range = 1000  # 用profit_rate取代
-direction_choppy = 0  # The critical value of direction of position to avoid choppy trend
-anti_direction_choppy = 0  # The critical value of anti direction of position to avoid choppy trend
+leverage = 9
+profit_rate = 0.4
+choppy_rate = 0.5
+
 
 if __name__ == '__main__':
     print("System Initializing...")
@@ -28,16 +28,24 @@ if __name__ == '__main__':
 
     print("Reading Mock Trading From Trading View...")
     mock_trading_dataframe = pd.read_csv(csv_path)
-    mock_trading_dataframe['日期/時間'] = pd.to_datetime(mock_trading_dataframe['日期/時間'], format="%Y/%m/%d")
+    # print(mock_trading_dataframe)
+    # n = input()
+
+    try:
+        mock_trading_dataframe['日期/時間'] = pd.to_datetime(mock_trading_dataframe['日期/時間'], format="%Y-%m-%d %H:%M")
+    except:
+        mock_trading_dataframe['日期/時間'] = pd.to_datetime(mock_trading_dataframe['日期/時間'], format="%Y-%m-%d")
 
     print("Reading Klines.csv...")
     klines_dataframe = pd.read_csv("Klines.csv")
+    # print(klines_dataframe)
+    # n = input()
 
     # Normalize Date Format
     try:
-        klines_dataframe['Open Time'] = pd.to_datetime(klines_dataframe['Open Time'], format="%Y-%m-%d %H:%M:%S")
+        klines_dataframe['Open Time'] = pd.to_datetime(klines_dataframe['Open Time'], format="%Y-%m-%d")
     except Exception:
-        klines_dataframe['Open Time'] = pd.to_datetime(klines_dataframe['Open Time'], format="%/-%m/%d %H:%M")
+        klines_dataframe['Open Time'] = pd.to_datetime(klines_dataframe['Open Time'], format="%Y-%m-%d %H:%M:%S")
 
     print("Get Entry Data...")
     entry_data = functions.get_entry_time_price(klines_dataframe, mock_trading_dataframe)
@@ -48,9 +56,9 @@ if __name__ == '__main__':
                                                                   start_property=initial_property,
                                                                   buy=buy,
                                                                   leverage=leverage,
-                                                                  afford_range=afford_range,
-                                                                  direction_choppy=direction_choppy,
-                                                                  anti_direction_choppy=anti_direction_choppy)
+                                                                  profit_rate=profit_rate,
+                                                                  choppy_rate=choppy_rate)
+    print("=======================================")
     print("Winning Percentage = {}%\nProperty = {}".format(winning_percentage, initial_property))
-    print("Leverage : {}, Afford Range : {}".format(leverage, afford_range))
+    print("Leverage : {}, Profit Rate : {}".format(leverage, profit_rate))
     print("Done!")

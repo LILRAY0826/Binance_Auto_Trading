@@ -33,10 +33,8 @@ class Functions:
                                                  "LONG_Result", "SHORT_Result", "Property"])
 
         # Iterate klines to simulate the market
-        progress = tqdm(total=len(klines_dataframe))
         for index, row in klines_dataframe.iterrows():
 
-            progress.update(1)
             if long_result != None:
                 long_position = [[None, None, None, None, None, None]]
 
@@ -165,9 +163,6 @@ class Functions:
                                                              "LONG_Result", "SHORT_Result", "Property"])
                 position_history = pd.concat([position_history, temp_dataframe])
 
-        position_history.to_csv("Position History.csv", encoding='utf_8_sig')
-        print("Uncertain = {}".format(uncertain_number))
-
         revise_value = 0
         if long_position[0][0] != None:
             revise_value += 1
@@ -175,9 +170,9 @@ class Functions:
             revise_value += 1
 
         try:
-            return list[0][-1], round(win_number/(trading_number - short_position_accumulate - long_position_accumulate - revise_value), 2) * 100
+            return list[0][-1], round(win_number/(trading_number - short_position_accumulate - long_position_accumulate - revise_value), 2) * 100, uncertain_number
         except:
-            return list[0][-1], "No Trading"
+            return list[0][-1], "No Trading", uncertain_number
 
     # About Market's information
     # Get 300 pass klines data
