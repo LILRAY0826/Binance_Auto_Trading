@@ -25,6 +25,8 @@ class Functions:
         uncertain_number = 0
         long_position_accumulate = 0
         short_position_accumulate = 0
+        long_position_buy_accumulate = 0
+        short_position_buy_accumulate = 0
 
         position_history = pd.DataFrame(columns=["klines_open_time", "klines_open_price", "klines_high_price", "klines_low_price", "klines_close_price", "space 1",
                                                  "order_entry_time", "order_entry_direction", "order_price", "order_quantity", "space 2",
@@ -53,10 +55,23 @@ class Functions:
             if entry_price == None:
                 quantity = None
             else:
-                quantity = round((buy * leverage) / entry_price, 2)
+                if "多" in entry_direction:
+                    if long_position[0][0] != None:
+                        quantity = long_position[0][3]
+                    else:
+                        quantity = round((buy * leverage) / entry_price, 3)
+                        if quantity < 0.001:
+                            quantity = 0.001
+                else:
+                    if short_position[0][0] != None:
+                        quantity = short_position[0][3]
+                    else:
+                        quantity = round((buy * leverage) / entry_price, 3)
+                        if quantity < 0.001:
+                            quantity = 0.001
 
             # Create Position
-            if boolean and start_property > buy:
+            if boolean and start_property > (quantity / leverage) * entry_price:
 
                 # Long Position
                 if "多" in entry_direction:
@@ -65,9 +80,11 @@ class Functions:
                         liquidation = round(entry_price * (1 - (100 / leverage) / 100), 2)
                         afford_range = entry_price * (profit_rate / leverage)
                         long_position = [[entry_time, entry_direction, entry_price, quantity, entry_price + afford_range, liquidation]]
+                        start_property -= (quantity / leverage) * entry_price
+                        long_position_buy_accumulate += (quantity / leverage) * entry_price
                     else:
                         afford_range = long_position[0][2] * (profit_rate / leverage)
-                        if long_position[0][2] - ((long_position[0][2] - long_position[0][4]) * choppy_rate) <= long_position[0][2] <= long_position[0][2] + afford_range + 20:
+                        if long_position[0][2] - ((long_position[0][2] - long_position[0][5]) * choppy_rate) <= entry_price <= long_position[0][2] + afford_range + 20:
                             entry_time, entry_price, entry_direction, quantity = None, None, None, None
                             pass
                         else:
@@ -80,6 +97,8 @@ class Functions:
                             afford_range = long_position[0][2] * (profit_rate / leverage)
                             long_position[0][4] = long_position[0][2] + afford_range
                             long_position[0][5] = round(long_position[0][2] * (1 - (100 / leverage) / 100), 2)
+                            start_property -= (quantity / leverage) * entry_price
+                            long_position_buy_accumulate += (quantity / leverage) * entry_price
 
                 # Short Position
                 elif "空" in entry_direction:
@@ -89,9 +108,11 @@ class Functions:
                         liquidation = round(entry_price * (1 + (100 / leverage) / 100), 2)
                         afford_range = entry_price * (profit_rate / leverage)
                         short_position = [[entry_time, entry_direction, entry_price, quantity, entry_price - afford_range, liquidation]]
+                        start_property -= (quantity / leverage) * entry_price
+                        short_position_buy_accumulate += (quantity / leverage) * entry_price
                     else:
                         afford_range = short_position[0][2] * (profit_rate / leverage)
-                        if short_position[0][2] - afford_range - 20 <= short_position[0][2] <= short_position[0][2] + ((short_position[0][4] - short_position[0][2]) * choppy_rate):
+                        if short_position[0][2] - afford_range - 20 <= entry_price <= short_position[0][2] + ((short_position[0][5] - short_position[0][2]) * choppy_rate):
                             entry_time, entry_price, entry_direction, quantity = None, None, None, None
                             pass
                         else:
@@ -104,22 +125,26 @@ class Functions:
                             afford_range = short_position[0][2] * (profit_rate / leverage)
                             short_position[0][4] = short_position[0][2] - afford_range
                             short_position[0][5] = round(short_position[0][2] * (1 + (100 / leverage) / 100), 2)
+                            start_property -= (quantity / leverage) * entry_price
+                            short_position_buy_accumulate += (quantity / leverage) * entry_price
 
             # Observe Exit Signal
             if long_position[0][0] != None:
                 if low_price < long_position[0][4] < high_price and long_position[0][5] < low_price:
-                    start_property += long_position[0][3] * (long_position[0][4] - long_position[0][2])
+                    start_property += ((long_position[0][4] / long_position[0][2] - 1) * leverage + 1) * long_position_buy_accumulate
                     long_result = "LONG Win"
                     win_number += 1 + long_position_accumulate
                     long_position_accumulate = 0
+                    long_position_buy_accumulate = 0
                 elif low_price < long_position[0][4] < high_price and long_position[0][5] > low_price:
                     long_result = "Uncertain"
                     long_position_accumulate = 0
                     uncertain_number += 1
+                    long_position_buy_accumulate = 0
                 elif long_position[0][5] > low_price:
-                    start_property += long_position[0][3] * (long_position[0][5] - long_position[0][2])
                     long_result = "LONG Lose"
                     long_position_accumulate = 0
+                    long_position_buy_accumulate = 0
                 else:
                     long_result = None
             else:
@@ -127,18 +152,20 @@ class Functions:
 
             if short_position[0][0] != None:
                 if low_price < short_position[0][4] < high_price and short_position[0][5] > high_price:
-                    start_property += short_position[0][3] * (short_position[0][2] - short_position[0][4])
+                    start_property += (1 + (1 - (short_position[0][4] / short_position[0][2])) * leverage) * short_position_buy_accumulate
                     short_result = "SHORT Win"
                     win_number += 1 + short_position_accumulate
                     short_position_accumulate = 0
+                    short_position_buy_accumulate = 0
                 elif low_price < short_position[0][4] < high_price and short_position[0][5] < high_price:
                     short_result = "Uncertain"
                     short_position_accumulate = 0
                     uncertain_number += 1
+                    short_position_buy_accumulate = 0
                 elif short_position[0][5] < high_price:
-                    start_property += short_position[0][3] * (short_position[0][2] - short_position[0][5])
                     short_result = "SHORT Lose"
                     short_position_accumulate = 0
+                    short_position_buy_accumulate = 0
                 else:
                     short_result = None
             else:

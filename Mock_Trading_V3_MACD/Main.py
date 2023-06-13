@@ -14,9 +14,9 @@ csv_path = "Trading_View_1hr.csv"
 # Mock Trading Parameter
 initial_property = 8000
 buy = 800
-leverage = 9
-profit_rate = 0.4
-choppy_rate = 0.5
+leverage = 30
+profit_rate = 0.8
+choppy_rate = 0.1
 
 
 if __name__ == '__main__':
@@ -28,8 +28,6 @@ if __name__ == '__main__':
 
     print("Reading Mock Trading From Trading View...")
     mock_trading_dataframe = pd.read_csv(csv_path)
-    # print(mock_trading_dataframe)
-    # n = input()
 
     try:
         mock_trading_dataframe['日期/時間'] = pd.to_datetime(mock_trading_dataframe['日期/時間'], format="%Y-%m-%d %H:%M")
@@ -38,8 +36,6 @@ if __name__ == '__main__':
 
     print("Reading Klines.csv...")
     klines_dataframe = pd.read_csv("Klines.csv")
-    # print(klines_dataframe)
-    # n = input()
 
     # Normalize Date Format
     try:
@@ -60,5 +56,5 @@ if __name__ == '__main__':
                                                                   choppy_rate=choppy_rate)
     print("=======================================")
     print("Winning Percentage = {}%\nProperty = {}".format(winning_percentage, initial_property))
-    print("Leverage : {}, Profit Rate : {}".format(leverage, profit_rate))
+    print("Leverage : {}, Profit Rate : {}, Choppy Rate : {}".format(leverage, profit_rate, choppy_rate))
     print("Done!")
