@@ -8,8 +8,8 @@ api_key = 'Nsw6xqsnHbfLyF8YExEfeVVJz4Jn3F4c4VHCr5L5sl8n8KUKzsPazLx4IX4dMaPD'
 api_secret = '5ggLxtySNfzAE64bRgXz6IYHxDtaIDx399FTG1FE9IBd4332AxNBAazeKOCW9HHv'
 
 # Klines Parameter
-start_date = "12 May, 2023"
-end_date = "12 Jun, 2023"
+start_date = "1 May, 2023"
+end_date = "1 Jun, 2023"
 interval = "1hr"  # 1hr, 4hr, 1day
 csv_path = "Trading_View_1hr.csv"
 
