@@ -8,21 +8,21 @@ api_key = 'Nsw6xqsnHbfLyF8YExEfeVVJz4Jn3F4c4VHCr5L5sl8n8KUKzsPazLx4IX4dMaPD'
 api_secret = '5ggLxtySNfzAE64bRgXz6IYHxDtaIDx399FTG1FE9IBd4332AxNBAazeKOCW9HHv'
 
 # Mock Trading Parameter
-start_date = "2019-02-01 00:00:00"
-initial_property = 8000
-buy = 3000
+start_date = "2020-07-01 00:00:00"
+initial_property = 1000000
+buy = 200000
 leverage = 25
 profit_rate = 0.5
 max_number_of_position = 1
 add_klines = 30
 add_property = 5000
-add_buy = 2500
+add_buy = 1500
 ema = 70
 std = 1.3
 mode = "single"  # single, loop
 
 # Klines Parameter
-end_date = "1 Dec, 2022"
+end_date = "1 Jul, 2022"
 interval = "1day"  # 30m, 1hr, 4hr, 1day
 csv_path = "Trading_View_1Day.csv"
 

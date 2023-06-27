@@ -20,6 +20,7 @@ class Functions:
         self.BBL_name = ""
         self.BBM_name = ""
         self.BBU_name = ""
+        self.initial_buy = 0
 
     def get_klines(self, start_date, end_date, interval, ema, std):
 
@@ -58,7 +59,7 @@ class Functions:
                 except:
                     pass
 
-        bbands_dataframe = pta.bbands(self.kline_dataframe['close'], length=ema, std=std)
+        bbands_dataframe = pta.bbands(self.kline_dataframe['open'], length=ema, std=std)
         self.kline_dataframe = pd.concat([self.kline_dataframe, bbands_dataframe], axis=1)
         self.BBL_name = "BBL_" + str(ema) + "_" + str(std)
         self.BBM_name = "BBM_" + str(ema) + "_" + str(std)
@@ -113,6 +114,7 @@ class Functions:
         win_number = 0
         trading_number = 0
         number_of_add_property = 0
+        self.initial_buy = buy
 
         progress = tqdm(total=len(self.kline_dataframe))
         for index, row in self.kline_dataframe.iterrows():
@@ -120,6 +122,7 @@ class Functions:
                 number_of_add_property += 1
                 start_property += add_property
                 buy += add_buy
+                self.initial_buy += add_buy
 
             progress.update(1)
 
@@ -132,7 +135,6 @@ class Functions:
             rsi_value = row["RSI"]
             bbu = row[self.BBU_name]
             bbl = row[self.BBL_name]
-            bbm = row[self.BBM_name]
             profit_price = None
             liquidation = None
 
@@ -187,6 +189,7 @@ class Functions:
                         win_number += 1
                         win_number_temp += 1
                         position_temp.remove(long_position[i])
+                        buy = self.initial_buy
                     elif low_price < order[4] < high_price and order[5] > low_price:
                         buy *= (1 / profit_rate)
                         uncertain_number += 1
@@ -219,6 +222,7 @@ class Functions:
                         win_number += 1
                         win_number_temp += 1
                         position_temp.remove(short_position[i])
+                        buy = self.initial_buy
                     elif low_price < order[4] < high_price and order[5] < high_price:
                         buy *= (1 / profit_rate)
                         uncertain_number += 1
