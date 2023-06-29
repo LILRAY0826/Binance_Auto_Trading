@@ -16,29 +16,30 @@ class Functions:
         super(Functions, self).__init__()
         self.parameter = configparser.ConfigParser()
         self.parameter.read("Parameter.ini")
-        self.api_key = self.parameter["Account_Info"]["API_Key"]
-        self.api_secret = self.parameter["Account_Info"]["API_Secret"]
+        self.api_key = self.parameter["Account_Info"]["api_key"]
+        self.api_secret = self.parameter["Account_Info"]["api_secret"]
 
         self.client = Client(self.api_key, self.api_secret)  # Assign binance client object
         self.futures_client = UMFutures()  # Assign Futures object
 
         # Klines Parameter
-        self.ema = int(self.parameter["Klines_Parameter"]["EMA"])
-        self.rsi = int(self.parameter["Klines_Parameter"]["RSI"])
-        self.bband_ema = int(self.parameter["Klines_Parameter"]["BBand_EMA"])
-        self.bband_std = float(self.parameter["Klines_Parameter"]["BBand_STD"])
+        self.ema = int(self.parameter["Klines_Parameter"]["ema"])
+        self.rsi = int(self.parameter["Klines_Parameter"]["rsi"])
+        self.bband_ema = int(self.parameter["Klines_Parameter"]["bband_ema"])
+        self.bband_std = float(self.parameter["Klines_Parameter"]["bband_std"])
 
         # Order Parameter
-        self.leverage = int(self.parameter["Order_Parameter"]["Leverage"])
-        self.profit_rate = float(self.parameter["Order_Parameter"]["Profit_Rate"])
-        self.buy = float(self.parameter["Order_Parameter"]["Buy"])
-        self.long_max_position = int(self.parameter["Order_Parameter"]["LONG_Max_Position"])
-        self.short_max_position = int(self.parameter["Order_Parameter"]["SHORT_Max_Position"])
+        self.leverage = int(self.parameter["Order_Parameter"]["leverage"])
+        self.profit_rate = float(self.parameter["Order_Parameter"]["profit_rate"])
+        self.buy = float(self.parameter["Order_Parameter"]["initial_buy"])
+        self.currently_buy = float(self.parameter["Order_Parameter"]["currently_buy"])
+        self.long_max_position = int(self.parameter["Order_Parameter"]["long_max_position"])
+        self.short_max_position = int(self.parameter["Order_Parameter"]["short_max_position"])
 
         # BBand Column Name
-        self.BBL_name = "BBL_" + str(ema) + "_" + str(std)
-        self.BBM_name = "BBM_" + str(ema) + "_" + str(std)
-        self.BBU_name = "BBU_" + str(ema) + "_" + str(std)
+        self.BBL_name = "BBL_" + str(self.bband_ema) + "_" + str(self.bband_std)
+        self.BBM_name = "BBM_" + str(self.bband_ema) + "_" + str(self.bband_std)
+        self.BBU_name = "BBU_" + str(self.bband_ema) + "_" + str(self.bband_std)
 
         # Check the margin and leverage is correct
         self.client.futures_change_leverage(symbol='BTCUSDT', leverage=self.leverage)
@@ -51,10 +52,11 @@ class Functions:
     def auto_trading(self, last_klines, open_klines):
         long = last_klines['MACD'] < 0 < open_klines['MACD']
         short = last_klines['MACD'] > 0 > open_klines['MACD']
+        self.monitor_open_orders()
         """
         1. Available Balance must be higher than Buy.
         """
-        if self.get_margins() > self.buy:
+        if self.get_margins() > self.currently_buy:
             """
             Long:
             2. Entry Price must be higher than EMA.
@@ -69,27 +71,27 @@ class Functions:
             5. Short Max Position > 0.
             """
             if long and open_klines[self.BBU_name] > open_klines['open'] > open_klines['EMA'] and 50 < open_klines['RSI'] < 70 and self.long_max_position > 0:
-                quantity = self.get_quantity(self.buy, self.leverage)
+                quantity = self.get_quantity()
                 self.client.futures_create_order(symbol='BTCUSDT',
                                                  side='BUY',
                                                  type='MARKET',
                                                  positionSide="LONG",
                                                  quantity=quantity)
                 self.long_max_position -= 1
-                self.parameter["Log"][datetime.now().strftime("%Y-%m-%d %H:%M:%S")] = "Create Long Position"
+                self.parameter.set("Log", str(datetime.now().strftime("%Y-%m-%d %H-%M-%S")), "Create Long Position")
 
             elif short and open_klines["EMA"] > open_klines['open'] > open_klines[self.BBL_name] and 30 < open_klines['RSI'] < 50 and self.short_max_position > 0:
-                quantity = self.get_quantity(self.buy, self.leverage)
+                quantity = self.get_quantity()
                 self.client.futures_create_order(symbol='BTCUSDT',
                                                  side='SELL',
                                                  type='MARKET',
                                                  positionSide="SHORT",
                                                  quantity=quantity)
                 self.short_max_position -= 1
-                self.parameter["Log"][datetime.now().strftime("%Y-%m-%d %H:%M:%S")] = "Create Short Position"
+                self.parameter.set("Log", str(datetime.now().strftime("%Y-%m-%d %H-%M-%S")), "Create Short Position")
 
             else:
-                self.parameter["Log"][datetime.now().strftime("%Y-%m-%d %H:%M:%S")] = "No Trading"
+                self.parameter.set("Log", str(datetime.now().strftime("%Y-%m-%d %H-%M-%S")), "No Trading")
                 pass
 
         time.sleep(0.5)
@@ -99,7 +101,7 @@ class Functions:
     """
     About Market's information
     """
-    # Get 500 pass klines data+
+    # Get 500 pass klines data
     def get_klines(self):
 
         # Get klines dataframe
@@ -154,8 +156,8 @@ class Functions:
 
         return dataframe.iloc[-2], dataframe.iloc[-1]
 
-    def get_quantity(self, buy: float, leverage: int):
-        return round(((buy / (float(self.futures_client.ticker_price("BTCUSDT")['price']))) * leverage), 3)
+    def get_quantity(self):
+        return round(((self.currently_buy / (float(self.futures_client.ticker_price("BTCUSDT")['price']))) * self.leverage), 3)
 
     """
      About Account's Information Function
@@ -215,11 +217,52 @@ class Functions:
                 break
 
     # Monitor Open Orders
-    # def monitor_open_orders(self):
-    #     register = []
-    #     open_orders = self.client.futures_get_open_orders(symbol="BTCUSDT")
-    #     for order in open_orders:
-    #         register.append(order["type"])
+    def monitor_open_orders(self):
+        order_list = self.client.futures_get_open_orders(symbol='BTCUSDT')
+        take_profit_counter = 0
+        stop_counter = 0
+        long_counter = 0
+        short_counter = 0
+
+        # Exist open orders
+        if len(order_list) > 0:
+            for order in order_list:
+                if order["type"] == "TAKE_PROFIT_MARKET":
+                    take_profit_counter += 1
+                elif order["type"] == "STOP_MARKET":
+                    stop_counter += 1
+
+                if order["positionSide"] == 'SHORT':
+                    short_counter += 1
+                elif order["positionSide"] == 'LONG':
+                    long_counter += 1
+
+            # Nothing
+            if take_profit_counter == stop_counter:
+                pass
+
+            # Win
+            elif take_profit_counter < stop_counter:
+                self.currently_buy = float(self.buy)
+
+                if long_counter > short_counter:
+                    self.short_max_position += 1
+                else:
+                    self.long_max_position += 1
+
+            # Lose
+            elif take_profit_counter > stop_counter:
+                self.currently_buy = float(self.buy) * (1 / self.profit_rate)
+
+                if long_counter > short_counter:
+                    self.short_max_position += 1
+                else:
+                    self.long_max_position += 1
+
+            else:
+                pass
+        else:
+            pass
 
     """
     Record Trading Info
@@ -227,30 +270,31 @@ class Functions:
     def write_ini(self):
 
         # Account_Info
-        self.parameter["Account_Info"]["API_Key"] = self.api_key
-        self.parameter["Account_Info"]["API_Secret"] = self.api_secret
+        self.parameter.set("Account_Info", "api_key", self.api_key)
+        self.parameter.set("Account_Info", "api_secret", self.api_secret)
 
         # Order_Parameter
-        self.parameter["Order_Parameter"]["Leverage"] = self.leverage
-        self.parameter["Order_Parameter"]["Profit_Rate"] = self.profit_rate
-        self.parameter["Order_Parameter"]["Buy"] = self.buy
-        self.parameter["Order_Parameter"]["LONG_Max_Position"] = self.long_max_position
-        self.parameter["Order_Parameter"]["Short_Max_Position"] = self.short_max_position
+        self.parameter.set("Order_Parameter", "leverage", str(self.leverage))
+        self.parameter.set("Order_Parameter", "profit_rate", str(self.profit_rate))
+        self.parameter.set("Order_Parameter", "initial_buy", str(self.buy))
+        self.parameter.set("Order_Parameter", "currently_buy", str(self.currently_buy))
+        self.parameter.set("Order_Parameter", "long_max_position", str(self.long_max_position))
+        self.parameter.set("Order_Parameter", "short_max_position", str(self.short_max_position))
 
         # Klines_Parameter
-        self.parameter["Klines_Parameter"]["EMA"] = self.ema
-        self.parameter["Klines_Parameter"]["RSI"] = self.rsi
-        self.parameter["Klines_Parameter"]["BBand_EMA"] = self.bband_ema
-        self.parameter["Klines_Parameter"]["MMand_STD"] = self.bband_std
+        self.parameter.set("Klines_Parameter", "ema", str(self.ema))
+        self.parameter.set("Klines_Parameter", "rsi", str(self.rsi))
+        self.parameter.set("Klines_Parameter", "bband_ema", str(self.bband_ema))
+        self.parameter.set("Klines_Parameter", "bband_std", str(self.bband_std))
 
-        with open('Parameter.ini', 'w') as configfile:  # save
+        with open('Parameter.ini', 'w') as configfile:  # Save as ini file
             self.parameter.write(configfile)
 
 
 if __name__ == '__main__':
 
-    print("System Initializing...")
     functions = Functions()
 
-    print("Auto Trading...")
-    functions.auto_trading(functions.get_klines())
+    last_kline, open_kline = functions.get_klines()
+
+    functions.auto_trading(last_kline, open_kline)
