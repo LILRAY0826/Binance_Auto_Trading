@@ -9,16 +9,16 @@ api_secret = '5ggLxtySNfzAE64bRgXz6IYHxDtaIDx399FTG1FE9IBd4332AxNBAazeKOCW9HHv'
 
 # Mock Trading Parameter
 start_date = "2020-07-01 00:00:00"
-initial_property = 1000000
-buy = 200000
+initial_property = 8000
+buy = 3000
 leverage = 25
 profit_rate = 0.5
 max_number_of_position = 1
 add_klines = 30
 add_property = 5000
-add_buy = 1500
+add_buy = 2500
 ema = 70
-std = 1.3
+std = 1.6
 mode = "single"  # single, loop
 
 # Klines Parameter

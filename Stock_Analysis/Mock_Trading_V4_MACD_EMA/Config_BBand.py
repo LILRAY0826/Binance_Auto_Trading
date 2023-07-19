@@ -43,7 +43,7 @@ class Functions:
         self.kline_dataframe['Open Time'] = pd.to_datetime((self.kline_dataframe['Open Time']) / 1000, unit='s')
         self.kline_dataframe['Close Time'] = pd.to_datetime((self.kline_dataframe['Close Time']) / 1000, unit='s')  # 288e5
 
-        self.kline_dataframe['EMA'] = self.kline_dataframe['open'].ewm(span=ema, adjust=False, min_periods=ema).mean()
+        # self.kline_dataframe['EMA'] = self.kline_dataframe['open'].ewm(span=ema, adjust=False, min_periods=ema).mean()
         self.kline_dataframe['RSI'] = pta.rsi(self.kline_dataframe['open'], length=12)
 
         try:

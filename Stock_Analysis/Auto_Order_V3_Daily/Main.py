@@ -70,7 +70,7 @@ class Functions:
             4. Entry Price must be higher than BBand Lower.
             5. Short Max Position > 0.
             """
-            if long and open_klines[self.BBU_name] > open_klines['open'] > open_klines['EMA'] and 50 < open_klines['RSI'] < 70 and self.long_max_position > 0:
+            if long and open_klines[self.BBU_name] > open_klines['open'] > open_klines[self.BBM_name] and 50 < open_klines['RSI'] < 70 and self.long_max_position > 0:
                 quantity = self.get_quantity()
                 self.client.futures_create_order(symbol='BTCUSDT',
                                                  side='BUY',
@@ -80,7 +80,7 @@ class Functions:
                 self.long_max_position -= 1
                 self.parameter.set("Log", str(datetime.now().strftime("%Y-%m-%d %H-%M-%S")), "Create Long Position")
 
-            elif short and open_klines["EMA"] > open_klines['open'] > open_klines[self.BBL_name] and 30 < open_klines['RSI'] < 50 and self.short_max_position > 0:
+            elif short and open_klines[self.BBM_name] > open_klines['open'] > open_klines[self.BBL_name] and 30 < open_klines['RSI'] < 50 and self.short_max_position > 0:
                 quantity = self.get_quantity()
                 self.client.futures_create_order(symbol='BTCUSDT',
                                                  side='SELL',
@@ -128,12 +128,6 @@ class Functions:
         dataframe['DEA'] = dataframe.index.map(dea)
         dataframe['MACD'] = dataframe.index.map(macd)
 
-        # Compute EMA
-        dataframe["EMA"] = dataframe['open'].ewm(span=self.ema, adjust=False, min_periods=self.ema).mean()
-
-        # Compute RSI
-        dataframe["RSI"] = pta.rsi(dataframe['open'], length=self.rsi)
-
         # Change Data Type in Dataframe
         for column in dataframe.columns:
             for index, item in enumerate(dataframe[column]):
@@ -141,6 +135,12 @@ class Functions:
                     dataframe[column][index] = round(float(item), 2)
                 except:
                     pass
+
+        # Compute EMA
+        dataframe["EMA"] = dataframe['open'].ewm(span=self.ema, adjust=False, min_periods=self.ema).mean()
+
+        # Compute RSI
+        dataframe["RSI"] = pta.rsi(dataframe['open'], length=self.rsi)
 
         # Compute BBands
         bbands_dataframe = pta.bbands(dataframe['open'], length=self.bband_ema, std=self.bband_std)
