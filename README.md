@@ -19,7 +19,6 @@ pip install pandas_ta
 pip install configparser
 pip install python-binance
 pip install binance-futures-connector
-0 0 * * * /home/lilray0826/yes/bin/python Main.py >> output.txt
 ```
 - Crontab
 ```
