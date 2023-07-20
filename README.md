@@ -23,7 +23,7 @@ pip install binance-futures-connector
 - Crontab
 ```
 which python
-0 0 * * * /home/lilray0826/yes/bin/python Main.py >> output.txt
+0 0 * * * /home/lilray0826/miniconda3/bin/python Main.py >> output.txt
 ```
 - Other Useful Command
 ```
